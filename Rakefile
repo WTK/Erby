@@ -18,12 +18,12 @@ rescue LoadError
   puts "Jeweler (or a dependency) not available. Install it with: sudo gem install jeweler"
 end
 
-require 'rake/testtask'
-Rake::TestTask.new(:test) do |test|
-  test.libs << 'lib' << 'test'
-  test.pattern = 'test/**/*_test.rb'
-  test.verbose = true
-end
+#require 'rake/testtask'
+#Rake::TestTask.new(:test) do |test|
+#  test.libs << 'lib' << 'test'
+#  test.pattern = 'test/**/*_test.rb'
+#  test.verbose = true
+#end
 
 #begin
 #  require 'rcov/rcovtask'
@@ -38,7 +38,7 @@ end
 #  end
 #end
 
-task :default => :test
+task :default => :version
 
 require 'rake/rdoctask'
 Rake::RDocTask.new do |rdoc|
