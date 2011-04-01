@@ -14,7 +14,7 @@ module ERBY
       end
 
       def read_any
-        raise "Bad version" unless read_1 == VERSION
+        raise "Bad version" unless read_1 == Erlang::Types::VERSION
         read_any_raw
       end
 
@@ -32,6 +32,7 @@ module ERBY
           when STRING then read_erl_string
           when LIST then read_list
           when BIN then read_bin
+          when PID then read_pid
         else
           raise "Unknown term tag: #{peek_1}"
         end
@@ -214,6 +215,15 @@ module ERBY
         end
         read_1 if type == LIST
         hash
+      end
+
+      def read_pid
+        fail "Invalid Type, not a pid" unless read_1 == PID
+        node = read_atom
+        id = read_4
+        serial = read_4
+        creation = read_1
+        Pid.new(node, id, serial, creation)
       end
 
       def read_nil

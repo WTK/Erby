@@ -32,6 +32,22 @@ module ERBY
       MAX_INT = (1 << 27) -1
       MIN_INT = -(1 << 27)
       MAX_ATOM = 255
+
+      class Pid
+        attr_reader :node, :node_id, :serial, :creation
+        def initialize(node,nid=5,serial=5,created=5)
+          @node = node.to_sym
+          @node_id = nid
+          @serial = serial
+          @creation = created
+        end
+      end
+
+      class Tuple < Array
+        def inspect
+          "t#{super}"
+        end
+      end
     end
   end
 end

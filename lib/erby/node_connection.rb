@@ -9,7 +9,7 @@ module ERBY
     STATE_CONNECTED = 7
 
     attr_accessor :destnode, :mod, :fun, :args, :port, :name, :cookie,
-                    :state, :response_data, :packet_len_size, :challenge_to_peer
+                    :state, :response_data, :packet_len_size, :challenge_to_peer, :rpc_args, :response_handler
 
     def initialize *init_data
       @args = []
@@ -20,6 +20,7 @@ module ERBY
       @state = STATE_DISCONNECTED
       @packet_len_size = 2
       @response_data = ''
+      @response_handler = 'close'
       super
     end
 
@@ -44,11 +45,25 @@ module ERBY
       fail
     end
 
-    def rpc args
-      puts "do rpc to: #{@mod}:#{@fun}, with args: #{args.inspect}"
-    end
-
     private
+    def rpc args
+      @response_handler = 'handle_rpc_response'
+      puts "do rpc to: #{@mod}:#{@fun}, with args: #{args.inspect}"
+
+      pid = Erlang::Types::Pid.new @name
+      
+      data = Erlang::Encoder.new
+      data.write_any Erlang::Types::Tuple.new [6, pid, @cookie.to_sym, :rex]
+      data.write_any Erlang::Types::Tuple.new [pid, Erlang::Types::Tuple.new([:call, @mod.to_sym, @fun.to_sym, args, :user])]
+
+      msg = Erlang::Encoder.new
+      msg.int4 data.to_s.length + 1
+      msg.write 'p'
+      msg.write data.to_s
+
+      send_data msg
+    end
+    
     def close
       @state = STATE_DISCONNECTED
       unbind
@@ -83,7 +98,7 @@ module ERBY
       #puts "handle packet #{packet.dump}"
       case @state
         when STATE_HANDSHAKE_RECV_STATUS then
-          raise "Didn't received valid status information on handshake." if packet[0..0] != 's'          
+          raise "Didn't received valid status information on handshake." if packet[0] != 115
           status = packet[1..packet.length]
           #puts "status=#{status.dump}"
           if status == 'ok' or status == 'ok_simultaneous'
@@ -97,7 +112,7 @@ module ERBY
             raise "Unexpected handshake status: \"#{status.dump}\". | #{status.length}"
           end
         when STATE_HANDSHAKE_RECV_CHALLENGE then
-          raise "Expected \"n\", got: \"#{packet[0..0].dump}\"." if packet[0..0] != 'n'
+          raise "Expected \"110\", got: \"#{packet[0]}\"." if packet[0] != 110
           @state = STATE_HANDSHAKE_RECV_CHALLENGE_ACK
 
           #peer_version = Erlang::Decoder.new(packet[1...3]).read_int2
@@ -107,20 +122,39 @@ module ERBY
 
           send_challenge_reply challenge
         when STATE_HANDSHAKE_RECV_CHALLENGE_ACK then
-          raise "Unexpected message. Expected \"a\", got: \"#{packet[0..0].dump}\"." if packet[0..0] != 'a'
+          raise "Unexpected message. Expected \"97\", got: \"#{packet[0]}\"." if packet[0] != 97
           digest = packet[1..packet.length]
           if digest_correct? digest
             @packet_len_size = 4
             @state = STATE_CONNECTED
-            succeed
+            #succeed
+            handshake_complete
           else
             raise "Connection attempt to disallowed node."
           end
         when STATE_CONNECTED then
           send_tick and return if packet.length == 0
+          send @response_handler, packet
       else
         raise "Unknown state to handle packet - \"#{packet.dump}\"."
       end
+    end
+
+    def handle_rpc_response packet
+      d = Erlang::Decoder.new packet
+      msg_type = d.read_int1
+      raise "Unexpected message type returned: #{msg_type}" unless msg_type == 112
+      # we can safely ignore control message
+      ctrl_msg = d.read_any
+      # message with response to our rpc
+      data = d.read_any      
+      #puts "ctrl_msg=#{ctrl_msg.inspect}"
+      #puts "msg=#{data.inspect}"
+      succeed data
+    end
+
+    def handshake_complete
+      rpc @rpc_args
     end
 
     def digest_correct? digest
@@ -213,13 +247,13 @@ module ERBY
                            :cookie => config[:cookie],
                            :fun => fun,
                            :port => port,
-                           :name => "erby_client_#{$$.to_s}@#{Socket.gethostname}"
-        conn.callback do
-          conn.rpc args
-          EventMachine::stop_event_loop
+                           :name => "client_#{rand(100000)}@erby",
+                           :rpc_args => args
+        conn.callback do |response|
+          return response
         end
         conn.errback do
-          #EventMachine::stop_event_loop
+          EventMachine::stop_event_loop
           raise "errorback!"
         end
       end
