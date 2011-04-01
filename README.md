@@ -33,9 +33,9 @@ Examples
 --------
 
     ERBY.math.add(60, 4)
-    #64
+    # => 64
     ERBY.call('math:add', [60, 4])
-    #64
+    # => 64
 
 TODO
 ----

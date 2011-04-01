@@ -250,7 +250,7 @@ module ERBY
                            :name => "client_#{rand(100000)}@erby",
                            :rpc_args => args
         conn.callback do |response|
-          return response
+          return response[1]
         end
         conn.errback do
           EventMachine::stop_event_loop
