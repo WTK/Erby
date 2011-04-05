@@ -48,7 +48,6 @@ module ERBY
     private
     def rpc args
       @response_handler = 'handle_rpc_response'
-      puts "do rpc to: #{@mod}:#{@fun}, with args: #{args.inspect}"
 
       pid = Erlang::Types::Pid.new @name
       
@@ -100,11 +99,11 @@ module ERBY
         when STATE_HANDSHAKE_RECV_STATUS then
           raise "Didn't received valid status information on handshake." if packet[0] != 115
           status = packet[1..packet.length]
-          #puts "status=#{status.dump}"
           if status == 'ok' or status == 'ok_simultaneous'
             @state = STATE_HANDSHAKE_RECV_CHALLENGE
           elsif status == 'nok' or status == 'not_allowed'
             raise "Handshake failed. Received \"#{status.dump}\" status."
+          # alive status means that there's already active connection between target node, and local node with given nodename
           elsif status == 'alive'
             send_alive true
             @state = STATE_HANDSHAKE_RECV_CHALLENGE

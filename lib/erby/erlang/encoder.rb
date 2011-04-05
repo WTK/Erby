@@ -16,7 +16,7 @@ module ERBY
       end
 
       def write_any obj
-        write_1 Erlang::Types::VERSION
+        write_1 Erlang::PROTOCOL_VERSION
         write_any_raw obj
       end
 
