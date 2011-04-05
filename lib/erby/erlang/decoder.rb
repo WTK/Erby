@@ -14,7 +14,7 @@ module ERBY
       end
 
       def read_any
-        raise "Bad version" unless read_1 == Erlang::Types::VERSION
+        raise "Bad version" unless read_1 == Erlang::PROTOCOL_VERSION
         read_any_raw
       end
 
@@ -26,6 +26,7 @@ module ERBY
           when SMALL_BIGNUM then read_small_bignum
           when LARGE_BIGNUM then read_large_bignum
           when FLOAT then read_float
+          when NEW_FLOAT then read_double
           when SMALL_TUPLE then read_small_tuple
           when LARGE_TUPLE then read_large_tuple
           when NIL then read_nil
@@ -92,6 +93,10 @@ module ERBY
         read(length)
       end
 
+      def read_8_double
+        read(8).unpack("G").first
+      end
+
       def read_atom
         raise "Invalid Type, not an atom" unless read_1 == ATOM
         length = read_2
@@ -147,6 +152,11 @@ module ERBY
         raise "Invalid Type, not a float" unless read_1 == FLOAT
         string_value = read_string(31)
         result = string_value.to_f
+      end
+
+      def read_double
+        fail("Invalid Type, not a double") unless read_1 == NEW_FLOAT
+        read_8_double
       end
 
       def read_small_tuple
