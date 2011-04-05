@@ -1,5 +1,7 @@
 module ERBY
   module Erlang
+    PROTOCOL_VERSION = 131
+
     module Types
       SMALL_INT = 97
       INT = 98
@@ -26,8 +28,6 @@ module ERBY
 
       FUN = 117
       NEW_FUN = 112
-
-      VERSION = 131
 
       MAX_INT = (1 << 27) -1
       MIN_INT = -(1 << 27)
