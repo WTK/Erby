@@ -24,6 +24,7 @@ module ERBY
       super
     end
 
+    # Method invoked by EM event loop, after establishing tcp connection
     def connection_completed
       @state = STATE_HANDSHAKE_RECV_STATUS
       # send our (local) nodename to start handshake process
